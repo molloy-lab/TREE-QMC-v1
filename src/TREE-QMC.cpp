@@ -74,10 +74,12 @@ const std::string help =
 "              number of artificial taxa in the subproblem)\n"
 "        -v 2: also write subproblem trees in newick format\n"
 "        -v 3: also write subproblem quartet graphs in phylip matrix format\n\n"
-"Contact: Yunheng Han (yhhan@umd.edu) or Erin Molloy (ekmolloy@umd.edu)\n\n"
+"Contact: Post issue to Github (https://github.com/molloy-lab/TREE-QMC/)\n"
+"        or email Yunheng Han (yhhan@umd.edu) & Erin Molloy (ekmolloy@umd.edu)\n\n"
 "If you use TREE-QMC in your work, please cite:\n"
-"  Han and Molloy, 2021, \"TREE-QMC: Scalable and accurate quartet-based species\n"
-"  tree estimation from gene trees\", https://github.com/yhhan19/TREE-QMC.\n"
+"  Han and Molloy, 2022, \"TREE-QMC: Improving quartet graph construction for\n"
+"  scalable and accurate species tree estimation from gene trees,\" bioRxiv,\n"
+"  https://doi.org/10.1101/2022.06.25.497608.\n"
 "================================================================================\n\n";
 
 
