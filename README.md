@@ -87,7 +87,8 @@ OPTIONS:
         -v 2: also write subproblem trees in newick format
         -v 3: also write subproblem quartet graphs in phylip matrix format
 
-Contact: Yunheng Han (yhhan@umd.edu) or Erin Molloy (ekmolloy@umd.edu)
+Contact: Post issue to Github (https://github.com/molloy-lab/TREE-QMC/)
+         or email Yunheng Han (yhhan@umd.edu) & Erin Molloy (ekmolloy@umd.edu)
 
 If you use TREE-QMC in your work, please cite:
   Han and Molloy, 2022, "TREE-QMC: Improving quartet graph construction for 
