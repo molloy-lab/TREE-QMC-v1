@@ -1,6 +1,8 @@
 TREE-QMC
 --------
 
+To learn more about TREE-QMC, check out our bioRxiv preprint: https://doi.org/10.1101/2022.06.25.497608
+
 To build TREE-QMC, use commands:
 ```
 git clone https://github.com/yhhan19/TREE-QMC.git
@@ -88,7 +90,8 @@ OPTIONS:
 Contact: Yunheng Han (yhhan@umd.edu) or Erin Molloy (ekmolloy@umd.edu)
 
 If you use TREE-QMC in your work, please cite:
-  Han and Molloy, 2021, "TREE-QMC: Scalable and accurate quartet-based species
-  tree estimation from gene trees", https://github.com/yhhan19/TREE-QMC.
+  Han and Molloy, 2022, "TREE-QMC: Improving quartet graph construction for 
+  scalable and accurate species tree estimation from gene trees," bioRxiv, 
+  https://doi.org/10.1101/2022.06.25.497608.
 ================================================================================
 ```
