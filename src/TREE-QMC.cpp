@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <cassert>
 #include <fstream>
@@ -116,6 +117,7 @@ class Matrix {
     the node of X becomes the parent of the nodes of taxa in S
     when X represents the taxa in the set S
 */
+class Tree;
 
 class Taxa {
     public:
@@ -132,6 +134,8 @@ class Taxa {
         };
         Taxa(str<void>::set labels, int weighting);
         Taxa(const Taxa &source);
+        Taxa(Tree *t, Taxa &source);
+        Taxa(str<int>::map labels, int weighting);
         ~Taxa();
         std::string to_string();
         std::string info();
@@ -141,6 +145,7 @@ class Taxa {
         int size();
         int single_size();
         int multiple_size();
+        double get_pairs();
         std::string index2label(int i);
         std::string index2leaflabel(int i);
         int label2index(std::string label);
@@ -187,17 +192,25 @@ class Tree {
         };
         Tree(std::ifstream &fin, int execution, int weighting, int s0, int s1);
         Tree(std::vector<Tree *> &input, str<void>::set &labels, int execution, int weighting, int seed);
+        Tree(std::vector<Tree *> &input, str<int>::map &labels, int execution, int weighting, int seed);
         Tree(const std::string &newick);
+        Tree(Tree *input, std::vector<std::string> &labels, std::vector<double> &label_prob, double tree_prob);
+        Tree(Tree *input, double preserve);
         std::string to_string();
+        std::string to_string(Taxa &subset);
         int size();
         ~Tree();
         int get_total_fake();
         double ***build_graph(Taxa &subset);
         void append_labels(Node *root, str<void>::set &labels);
         void append_labels_to(str<void>::set &labels);
+        void re_label(Node *root, str<int>::map &labels);
+        void relabel(str<int>::map &labels);
         void append_quartets(str<double>::map &quartets, Taxa &subset);
+        bool contain(std::string &label);
         static void append_quartet(str<double>::map &quartets, std::string quartet, double weight);
         static std::string join(std::string *labels);
+        static std::string join(const std::string &a, const std::string &b, const std::string &c, const std::string &d);
         static std::string *split(const std::string &qt);
     private: 
         str<Node *>::map label2node;
@@ -211,7 +224,9 @@ class Tree {
         double multiple_pairs(Node *root, int x, int y);
         str<void>::set build_mat(Node *root, Taxa &subset, double ***mat);
         Node *build_tree(const std::string &newick);
+        Node *extract_tree(Node *input_root);
         std::string display_tree(Node *root);
+        std::string display_tree(Node *root, Taxa &subset);
         Node *construct_stree(std::vector<Tree *> &input, Taxa &subset, int pid, int depth);
         Node *construct_stree_brute(str<double>::map &input, Taxa &subset, int pid, int depth);
         Node *construct_stree_check(str<double>::map &input, std::vector<Tree *> &input_, Taxa &subset, int pid, int depth);
@@ -220,6 +235,8 @@ class Tree {
         Node *pseudo2node(Node *root, const std::string &pseudo);
         static std::string ordered(const std::string &a, const std::string &b, const std::string &c);
         void output_quartets(str<double>::map &quartets, Taxa &subset);
+        void output_trees(std::vector<Tree *> &input, Taxa &subset);
+        void output_quartet_groups(str<double>::map &quartets, Taxa &subset);
 };
 
 /*
@@ -235,6 +252,7 @@ class Graph {
         std::string display_graph();
         double distance(Graph *g, int k);
         double get_cut(str<void>::set *A, str<void>::set *B);
+        int get_clusters(str<int>::map *C, int limit, int matrix_power, double inflate_power, double alpha);
         ~Graph();
     private:
         int size;
@@ -324,6 +342,53 @@ Taxa::Taxa(str<void>::set labels, int weighting) {
     }
 }
 
+Taxa::Taxa(str<int>::map labels, int weighting) {
+    singles = 0;
+    int total = 0;
+    this->weighting = weighting;
+    for (auto elem : labels) {
+        std::string label = elem.first;
+        int value = elem.second;
+        if (value == 1) {
+            label = label + "_1";
+            Node *node = new Node(label);
+            label2node[label] = node;
+            roots.push_back(node);
+            leaves.push_back(node);
+            node->index = total ++;
+            node->is_single = true;
+            node->weight = 1;
+            node->size = 1;
+            node->parent = NULL;
+        }
+    }
+    for (auto elem : labels) {
+        std::string label = elem.first;
+        int value = elem.second;
+        if (value > 1) {
+            Node *root = new Node(label);
+            label2node[label] = root;
+            roots.push_back(root);
+            root->index = total ++;
+            root->weight = 1.0 / value;
+            root->size = value;
+            root->is_single = false;
+            root->parent = NULL;
+            for (int i = 0; i < value; i ++) {
+                std::string new_label = label + "_" + std::to_string(i + 1);
+                Node *node = new Node(new_label);
+                label2node[new_label] = node;
+                node->weight = 1.0;
+                node->size = 1;
+                node->is_single = false;
+                node->index = -1;
+                leaves.push_back(node);
+                node->parent = root;
+            }
+        }
+    }
+}
+
 Taxa::Taxa(const Taxa &source) {
     singles = source.singles;
     this->weighting = source.weighting;
@@ -350,6 +415,65 @@ Taxa::Taxa(const Taxa &source) {
     }
 }
 
+Taxa::Taxa(Tree *t, Taxa &source) {
+    this->weighting = source.weighting;
+    for (auto element : source.label2node) {
+        Node *new_node = new Node(element.first);
+        label2node[element.first] = new_node;
+        new_node->is_single = element.second->is_single;
+        new_node->weight = element.second->weight;
+        Node *p = new_node;
+        new_node->size = element.second->size;
+    }
+    for (auto element : source.label2node) {
+        Node *new_node = label2node[element.first];
+        if (element.second->parent == NULL)
+            new_node->parent = NULL;
+        else 
+            new_node->parent = label2node[element.second->parent->label];
+    }
+    singles = 0;
+    for (Node *temp_leaf : source.leaves) {
+        Node *leaf = label2node[temp_leaf->label];
+        if (t->contain(leaf->label)) {
+            if (leaf->parent == NULL) 
+                singles ++;
+            leaves.push_back(leaf);
+        }
+        else {
+            label2node.erase(leaf->label);
+            Node *p = leaf->parent;
+            while (p != NULL) {
+                p->size -= 1;
+                p = p->parent;
+            }
+            p = leaf->parent;
+            Node *q = NULL;
+            while (p != NULL) {
+                double iw = 1 / p->weight - 1;
+                if (iw > 1e-4) {
+                    p->weight = 1 / iw;
+                    break;
+                }
+                else {
+                    label2node.erase(p->label);
+                    q = p->parent;
+                    delete p;
+                }
+                p = q;
+            }
+            delete leaf;
+        }
+    }
+    int i = 0;
+    for (Node *root : source.roots) {
+        if (label2node.find(root->label) != label2node.end()) {
+            roots.push_back(label2node[root->label]);
+            label2node[root->label]->index = i ++;
+        }
+    }
+}
+
 Taxa::~Taxa() {
     for (auto element : label2node) {
         delete element.second;
@@ -359,7 +483,7 @@ Taxa::~Taxa() {
 std::string Taxa::to_string() {
     std::string s = "";
     for (Node *root : roots) 
-        s += root->label + " ";
+        s += root->label + "(" + std::to_string(root->size) + ") ";
     return s;
 }
 
@@ -436,6 +560,11 @@ int Taxa::label2index(std::string label) {
 int Taxa::label2key(std::string label) {
     if (is_single(label)) return 0;
     return label2index(label) - singles + 1;
+}
+
+double Taxa::get_pairs() {
+    double t0 = single_size() - 2, t1 = multiple_size(), t2 = multiple_size();
+    return (t1 * t1 - t2) / 2 + t1 * t0 + t0 * (t0 - 1) / 2;
 }
 
 std::string Taxa::key2label(int i) {
@@ -559,6 +688,71 @@ void Tree::output_quartets(str<double>::map &quartets, Taxa &subset) {
     logs[4].close();
 }
 
+void Tree::output_trees(std::vector<Tree *> &input, Taxa &subset) {
+    logs[4].open(input_file + ".inttrees");
+    for (auto elem : input) {
+        logs[4] << elem->to_string(subset) << ';' << std::endl;
+    }
+    logs[4].close();
+    logs[4].open(input_file + ".taxon_name_map");
+    for (int i = 0; i < subset.single_size(); i ++) 
+        logs[4] << subset.index2label(i) << ":" << i << std::endl;
+    logs[4].close();
+}
+
+void Tree::output_quartet_groups(str<double>::map &quartets, Taxa &subset) {
+    logs[4].open(input_file + ".weighted_quartet_groups");
+    int idx[4], leaves = subset.leaf_size();
+    for (idx[0] = 0; idx[0] < leaves; idx[0] ++) 
+    for (idx[1] = idx[0] + 1; idx[1] < leaves; idx[1] ++) 
+    for (idx[2] = idx[1] + 1; idx[2] < leaves; idx[2] ++) 
+    for (idx[3] = idx[2] + 1; idx[3] < leaves; idx[3] ++) {
+        std::string labels[4];
+        for (int i = 0; i < 4; i ++) 
+            labels[i] = subset.index2leaflabel(idx[i]);
+        std::sort(labels, labels + 4);
+        std::string qA = join(labels[0], labels[1], labels[2], labels[3]);
+        std::string qB = join(labels[0], labels[2], labels[1], labels[3]);
+        std::string qC = join(labels[0], labels[3], labels[1], labels[2]);
+        logs[4] << qA << ' ' << qB << ' ' << qC << ":" << quartets[qA] << ' ' << quartets[qB] << ' ' << quartets[qC] << std::endl;
+    }
+    logs[4].close();
+}
+
+Tree::Tree(std::vector<Tree *> &input, str<int>::map &labels, int execution, int weighting, int seed) {
+    tid = 0;
+    Taxa subset = Taxa(labels, weighting);
+    if (seed < 0) srand(time(0)); else srand(seed);
+    if (execution == 0) {
+        // Run efficient algorithm
+        root = construct_stree(input, subset, -1, 0);
+    }
+    else if (execution == 1) {
+        // Run naive algorithm
+        str<double>::map quartets;
+        for (Tree *t : input) t->append_quartets(quartets, subset);
+        root = construct_stree_brute(quartets, subset, -1, 0);
+    }
+    else if (execution == 2) {
+        // Run naive algorithm and write quartets
+        str<double>::map quartets;
+        for (Tree *t : input) t->append_quartets(quartets, subset);
+        output_quartets(quartets, subset);
+        root = construct_stree_brute(quartets, subset, -1, 0);
+    }
+    else if (execution == 4) {
+        output_trees(input, subset);
+        root = new Node("0");
+        // root = construct_stree(input, subset, -1, 0);
+    }
+    else {
+        // Check efficient and naive algorithms produce same quartet graphs (execution == 3)
+        str<double>::map quartets;
+        for (Tree *t : input) t->append_quartets(quartets, subset);
+        root = construct_stree_check(quartets, input, subset, -1, 0);
+    }
+}
+
 Tree::Tree(std::vector<Tree *> &input, str<void>::set &labels, int execution, int weighting, int seed) {
     tid = 0;
     Taxa subset = Taxa(labels, weighting);
@@ -580,6 +774,11 @@ Tree::Tree(std::vector<Tree *> &input, str<void>::set &labels, int execution, in
         output_quartets(quartets, subset);
         root = construct_stree_brute(quartets, subset, -1, 0);
     }
+    else if (execution == 4) {
+        output_trees(input, subset);
+        root = new Node("0");
+        // root = construct_stree(input, subset, -1, 0);
+    }
     else {
         // Check efficient and naive algorithms produce same quartet graphs (execution == 3)
         str<double>::map quartets;
@@ -597,8 +796,37 @@ Tree::Tree(const std::string &newick) {
     }
 }
 
+Tree::Tree(Tree *input, std::vector<std::string> &labels, std::vector<double> &label_prob, double tree_prob) {
+    for (int i = 0; i < labels.size(); i ++) {
+        if ((float) rand() / RAND_MAX < label_prob[i] * tree_prob) {
+            label2node[labels[i]] = NULL;
+        }
+    }
+    root = extract_tree(input->root);
+}
+
+Tree::Tree(Tree *input, double preserve) {
+    std::vector<std::string> labels;
+    for (auto elem : input->label2node) 
+        labels.push_back(elem.first);
+    for (int i = labels.size() - 1; i > 0; i --) {
+        int j = rand() % (i + 1);
+        std::string temp = labels[i];
+        labels[i] = labels[j];
+        labels[j] = temp;
+    }
+    int limit = preserve < 0 ? labels.size() : (int) (preserve * labels.size());
+    for (int i = 0; i < limit; i ++) 
+        label2node[labels[i]] = NULL;
+    root = extract_tree(input->root);
+}
+
 std::string Tree::to_string() {
     return display_tree(root);
+}
+
+std::string Tree::to_string(Taxa &subset) {
+    return display_tree(root, subset);
 }
 
 int Tree::size() {
@@ -607,6 +835,10 @@ int Tree::size() {
 
 Tree::~Tree() {
     delete root;
+}
+
+bool Tree::contain(std::string &label) {
+    return label2node.find(label) != label2node.end();
 }
 
 int Tree::get_total_fake() {
@@ -626,6 +858,27 @@ void Tree::append_labels(Node *root, str<void>::set &labels) {
 
 void Tree::append_labels_to(str<void>::set &labels) {
     append_labels(root, labels);
+}
+
+void Tree::re_label(Node *root, str<int>::map &labels) {
+    if (root->left == NULL) {
+        if (labels.find(root->label) == labels.end()) {
+            labels[root->label] = 0;
+        }
+        labels[root->label] ++;
+
+        label2node.erase(root->label);
+        root->label = root->label + "_" + std::to_string(labels[root->label]);
+        label2node[root->label] = root;
+    }
+    else {
+        re_label(root->left, labels);
+        re_label(root->right, labels);
+    }
+}
+
+void Tree::relabel(str<int>::map &labels) {
+    re_label(root, labels);
 }
 
 double ***Tree::build_graph(Taxa &subset) {
@@ -675,6 +928,8 @@ double ***Tree::build_graph(Taxa &subset) {
         for (int i = 0; i <= m; i ++) 
             c[i] = i == 0 ? root->leaves[i] - 2 : root->leaves[i];
         double sum = Node::get_pairs(c, root->s1, root->s2, 0, 0);
+        double true_sum = subset.get_pairs();
+        // std::cout << sum << ' ' << true_sum << std::endl;
         delete [] c;
         for (int i = 0; i < subset.size(); i ++) {
             for (int j = 0; j < subset.size(); j ++) {
@@ -753,10 +1008,37 @@ Tree::Node *Tree::build_tree(const std::string &newick) {
     }
 }
 
+Tree::Node *Tree::extract_tree(Tree::Node *input_root) {
+    if (input_root->left == NULL) {
+        if (label2node.find(input_root->label) == label2node.end()) return NULL;
+        Node *root = new Node(input_root->label);
+        label2node[input_root->label] = root;
+        return root;
+    }
+    else {
+        Node *left = extract_tree(input_root->left);
+        Node *right = extract_tree(input_root->right);
+        if (left == NULL && right == NULL) return NULL;
+        if (left == NULL && right != NULL) return right;
+        if (left != NULL && right == NULL) return left;
+        Node *root = new Node(Node::pseudonym());
+        root->left = left; root->right = right;
+        root->left->parent = root->right->parent = root;
+        return root;
+    }
+}
+
 std::string Tree::display_tree(Node *root) {
     if (root->left == NULL) 
         return root->label;
     return "(" + display_tree(root->left) + "," + display_tree(root->right) + ")";
+}
+
+std::string Tree::display_tree(Node *root, Taxa &subset) {
+    if (root->left == NULL) {
+        return std::to_string(subset.label2index(root->label));
+    }
+    return "(" + display_tree(root->left, subset) + "," + display_tree(root->right, subset) + ")";
 }
 
 void Tree::clear_states(Node *root) {
@@ -958,6 +1240,34 @@ Tree::Node *Tree::construct_stree(std::vector<Tree *> &input, Taxa &subset, int 
         Graph *g = new Graph(input, subset);
         str<void>::set As, Bs;
         double weight = g->get_cut(& As, & Bs);
+        /*
+        str<int>::map Cs;
+        int clusters = g->get_clusters(& Cs, 50, 2, 1.4, weight);
+        std::cout << "clusters: " << clusters << std::endl;
+        int *check = new int[size];
+        for (int i = 0; i < size; i ++) 
+            check[i] = -1;
+        for (auto elem : Cs) {
+            std::string key = elem.first;
+            int value = elem.second;
+            if (check[value] == -1) {
+                if (As.find(key) != As.end()) 
+                    check[value] = 1;
+                else 
+                    check[value] = 2;
+            }
+            else {
+                if (As.find(key) != As.end()) 
+                    if (check[value] != 1) 
+                        std::cout << "dismatch: " << key << " " << value << " " << check[value] << " 1" << std::endl;
+                    else ;
+                else 
+                    if (check[value] != 2) 
+                        std::cout << "dismatch: " << key << " " << value << " " << check[value] << " 2" << std::endl;
+            }
+        }
+        delete [] check;
+        */
         Taxa Am(subset), Bm(subset);
         std::string pseudo = Tree::Node::pseudonym();
         Bm.update(As, pseudo);
@@ -981,6 +1291,7 @@ Tree::Node *Tree::construct_stree(std::vector<Tree *> &input, Taxa &subset, int 
             logs[2].close();
         }
     }
+    std::cout << display_tree(root) << std::endl;
     return root;
 }
 
@@ -1131,6 +1442,10 @@ std::string Tree::join(std::string *labels) {
     return ordered(ordered(labels[0], labels[1], ","), ordered(labels[2], labels[3], ","), "|");
 }
 
+std::string Tree::join(const std::string &a, const std::string &b, const std::string &c, const std::string &d) {
+    return ordered(ordered(a, b, ","), ordered(c, d, ","), "|");
+}
+
 std::string *Tree::split(const std::string &qt) {
     std::string *labels = new std::string[4];
     std::string s = qt;
@@ -1157,10 +1472,16 @@ void Tree::append_quartets(str<double>::map &quartets, Taxa &subset) {
         Node *nodes[4];
         int deepest = -1, id[4];
         std::string labels[4];
+        bool flag = true;
         for (int i = 0; i < 4; i ++) {
+            if (label2node.find(subset.index2leaflabel(idx[i])) == label2node.end()) {
+                flag = false;
+                break;
+            }
             nodes[i] = label2node[subset.index2leaflabel(idx[i])];
             id[i] = -1;
         }
+        if (! flag) continue;
         for (int i = 0; i < 4; i ++) {
             for (int j = i + 1; j < 4; j ++) {
                 Node *p = nodes[i], *q = nodes[j];
@@ -1215,15 +1536,31 @@ Graph::Graph(std::vector<Tree*> &input, Taxa &subset) {
     graph = Matrix::new_mat<double>(size);
     for (int i = 0; i < input.size(); i ++) {
         Tree *t = input[i];
-        double ***mat = t->build_graph(subset);
-        for (int j = 0; j < size; j ++) {
-            for (int k = 0; k < size; k ++) {
-                graph[j][k][0] += mat[j][k][0];
-                graph[j][k][1] += mat[j][k][1];
+        Taxa subsubset(t, subset);
+        if (subsubset.size() < 4) continue;
+        double ***mat = t->build_graph(subsubset);
+        for (int j = 0; j < subsubset.size(); j ++) {
+            for (int k = 0; k < subsubset.size(); k ++) {
+                int j_ = subset.label2index(subsubset.index2label(j));
+                int k_ = subset.label2index(subsubset.index2label(k));
+                graph[j_][k_][0] += mat[j][k][0];
+                graph[j_][k_][1] += mat[j][k][1];
             }
         }
-        Matrix::delete_mat<double>(mat, size);
+        Matrix::delete_mat<double>(mat, subsubset.size());
     }
+    /*
+    std::cout << subset.get_pairs() << ' '  << input.size() << std::endl;
+    for (int j = 0; j < subset.size(); j ++) {
+        for (int k = 0; k < subset.size(); k ++) {
+            double part_sum = graph[j][k][0] + graph[j][k][1];
+            if (part_sum < 1e-6) continue;
+            double true_sum = subset.get_pairs();
+            graph[j][k][0] *= true_sum / part_sum;
+            graph[j][k][1] *= true_sum / part_sum;
+        }
+    }
+    */
 }
 
 Graph::Graph(str<double>::map &input, Taxa &subset) {
@@ -1268,16 +1605,29 @@ double Graph::get_cut(str<void>::set *A, str<void>::set *B) {
         double alpha = (lower + upper) / 2.0;
         a.clear(); b.clear();
         double weight = sdp_cut(alpha, &a, &b);
-        if (weight < 0.001) {
+        if (weight < 0.001 || a.size() <= 1 || b.size() <= 1) {
             upper = alpha;
         }
         else {
             lower = alpha;
-            positive_weight = weight;
+            positive_weight = alpha;
             *A = a;
             *B = b;
         }
     }
+    if (A->size() <= 1 || B->size() <= 1) {
+        std::cout << display_graph();
+    }
+    assert(A->size() > 1 && B->size() > 1);
+    /*
+    for (int i = 0; i < size; i ++) {
+        if (A->find(labels[i]) != A->end()) 
+            std::cout << std::setw(4) << "1";
+        else 
+            std::cout << std::setw(4) << "2";
+    }
+    std::cout << std::endl;
+    */
     return positive_weight;
 }
 
@@ -1315,6 +1665,137 @@ double Graph::sdp_cut(double alpha, str<void>::set *A, str<void>::set *B) {
     return solution.get_weight();
 }
 
+void dfs(double ***matrix, int size, int root, int *visited, std::vector<int> *ordered) {
+    for (int i = 0; i < size; i ++) {
+        if (visited[i] == 0 && matrix[root][i][1] > 1e-6) {
+            visited[root] = 1;
+            dfs(matrix, size, i, visited, ordered);
+            ordered->push_back(i);
+        }
+    }
+}
+
+void dfs2(double ***matrix, int size, int root, int *visited, int clusters) {
+    for (int i = 0; i < size; i ++) {
+        if (visited[i] == 0 && matrix[i][root][1] > 1e-6) {
+            visited[i] = clusters;
+            dfs2(matrix, size, i, visited, clusters);
+        }
+    }
+}
+
+int Graph::get_clusters(str<int>::map *C, int limit, int matrix_power, double inflate_power, double alpha) {
+    double ***matrix = Matrix::new_mat<double>(size);
+    for (int j = 0; j < size; j ++) {
+        double sum = 0;
+        for (int i = 0; i < size; i ++) {
+            double weight = - graph[i][j][0] + alpha * graph[i][j][1];
+            if (weight < 0) weight = 0;
+            sum += weight;
+        }
+        for (int i = 0; i < size; i ++) {
+            double weight = - graph[i][j][0] + alpha * graph[i][j][1];
+            if (weight < 0) weight = 0;
+            matrix[i][j][1] = weight / sum;
+        }
+    }
+    for (int i = 0; i < size; i ++) 
+        matrix[i][i][0] = matrix[i][i][1] = 1;
+    double ***temp = Matrix::new_mat<double>(size);
+    while (limit -- > 0) {
+        for (int i = 0; i < size; i ++) {
+            for (int j = 0; j < size; j ++) {
+                temp[i][j][1] = matrix[i][j][0];
+            }
+        }
+        for (int times = 0; times < matrix_power; times ++) {
+            for (int i = 0; i < size; i ++) {
+                for (int j = 0; j < size; j ++) {
+                    temp[i][j][0] = temp[i][j][1];
+                    temp[i][j][1] = 0;
+                }
+            }
+            for (int i = 0; i < size; i ++) {
+                for (int j = 0; j < size; j ++) {
+                    for (int k = 0; k < size; k ++) {
+                        temp[i][j][1] += temp[i][k][0] * matrix[k][j][1];
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < size; i ++) {
+            for (int j = 0; j < size; j ++) {
+                matrix[i][j][1] = temp[i][j][1];
+            }
+        }
+        for (int i = 0; i < size; i ++) {
+            for (int j = 0; j < size; j ++) {
+                matrix[i][j][1] = exp(log(matrix[i][j][1]) * inflate_power);
+            }
+        }
+        for (int j = 0; j < size; j ++) {
+            double sum = 0;
+            for (int i = 0; i < size; i ++) 
+                sum += matrix[i][j][1];
+            for (int i = 0; i < size; i ++) 
+                matrix[i][j][1] = matrix[i][j][1] / sum;
+        }
+    }
+    //std::cout << Matrix::display_mat<double>(matrix, size, 1) << std::endl;
+    /*
+    int *visited = new int[size];
+    std::vector<int> ordered;
+    for (int i = 0; i < size; i ++) 
+        visited[i] = 0;
+    for (int i = 0; i < size; i ++) {
+        if (visited[i] == 0) {
+            visited[i] = 1;
+            dfs(matrix, size, i, visited, & ordered);
+            ordered.push_back(i);
+        }
+    }
+    for (int i = 0; i < size; i ++) 
+        visited[i] = 0;
+    int clusters = 0;
+    for (int i = size - 1; i > 0; i --) {
+        int j = ordered[i];
+        if (visited[j] == 0) {
+            clusters ++;
+            visited[j] = clusters;
+            dfs2(matrix, size, j, visited, clusters);
+        }
+    }
+    for (int i = 0; i < size; i ++) 
+        std::cout << visited[i] << ' ';
+    std::cout << std::endl;
+    */
+    int clusters = 0;
+    int *visited = new int[size];
+    for (int i = 0; i < size; i ++) 
+        visited[i] = 0;
+    for (int i = 0; i < size; i ++) {
+        int j;
+        for (j = 0; j < size; j ++) 
+            if (matrix[i][j][1] > 1e-6) break;
+        if (j != size && visited[i] == 0) {
+            clusters ++;
+            for (int j = 0; j < size; j ++) {
+                if (matrix[i][j][1] > 1e-6)
+                    visited[j] = clusters;
+            }
+        }
+    }
+    for (int i = 0; i < size; i ++) {
+        (*C)[labels[i]] = visited[i];
+        std::cout << std::setw(4) << visited[i];
+    }
+    std::cout << std::endl;
+    delete [] visited;
+    Matrix::delete_mat<double>(matrix, size);
+    Matrix::delete_mat<double>(temp, size);
+    return clusters;
+} 
+
 int main(int argc, char** argv) {
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -1328,6 +1809,7 @@ int main(int argc, char** argv) {
     int cutseed = 1;
     int weighting = 2;  // taxon weighting = normalization scheme
     int execution = 0;
+    double preserve = -1.0;
 
     for (int i = 0; i < argc; i ++) {
         std::string opt(argv[i]);
@@ -1347,7 +1829,7 @@ int main(int argc, char** argv) {
         if (opt == "-x" || opt == "--execution") {
             std::string param = "";
             if (i < argc - 1) param = argv[++ i];
-            if (param != "0" && param != "1" && param != "2" && param != "3") {
+            if (param != "0" && param != "1" && param != "2" && param != "3" && param != "4") {
                 std::cout << "ERROR: invalid execution parameter!" << std::endl;
                 std::cout << help;
                 return 0;
@@ -1392,6 +1874,10 @@ int main(int argc, char** argv) {
             }
             cutseed = std::stoi(param);
         }
+        if (opt == "--preserve" && i < argc - 1) {
+            std::string param = argv[++ i];
+            preserve = std::stof(param);
+        }
     }
     std::ifstream fin(input_file);
     if (! fin.is_open()) {
@@ -1401,22 +1887,52 @@ int main(int argc, char** argv) {
     }
 
     std::string newick;
-    std::vector<Tree *> input;
-    str<void>::set labels;
+    std::vector<Tree *> input, temp_input;
+    str<void>::set labels, temp_labels;
 
     if (polyseed < 0) srand(time(0)); else srand(polyseed);
 
     // Read input gene trees
-    int total_fake = 0;
+    
+    int total_fake = 0, i = 0;
     while (std::getline(fin, newick)) {
         if (newick.find(";") == std::string::npos) break;
         Tree *t = new Tree(newick);
         total_fake += t->get_total_fake();
-        input.push_back(t);
-        t->append_labels_to(labels);
+        t->append_labels_to(temp_labels);
+        temp_input.push_back(t);
     }
     fin.close();
 
+    input = temp_input;
+    labels = temp_labels;
+    /*
+    str<int>::map multi_labels;
+    for (Tree *t : input) {
+        str<int>::map tree_labels;
+        t->relabel(tree_labels);
+        for (auto elem : tree_labels) {
+            std::string key = elem.first;
+            int value = elem.second;
+            if (multi_labels.find(key) == multi_labels.end()) {
+                multi_labels[key] = 0;
+            }
+            if (value > multi_labels[key]) 
+                multi_labels[key] = value;
+        }
+        std::cout << t->to_string() << std::endl;
+    }
+    str<std::string>::map multi_dict;
+    for (auto elem : multi_labels) {
+        std::string key = elem.first;
+        int value = elem.second;
+        for (int i = 1; i <= value; i ++) {
+            std::string new_label = key + "_" + std::to_string(i);
+            multi_dict[new_label] = key;
+            std::cout << new_label << ' ' << key << std::endl;
+        }
+    }
+    */
     // Write input gene trees if refined one or more polytomies
     std::cout << "Performed " << total_fake << " refinement operations on input\n";
     if (total_fake) {
@@ -1425,18 +1941,6 @@ int main(int argc, char** argv) {
             logs[0] << t->to_string() << ";" << std::endl;
         }
         logs[0].close();
-    }
-
-    // Check for incomplete trees
-    for (Tree *t : input) {
-        if (t->size() != labels.size()) {
-            std::cout << 
-"ERROR: Incomplete gene trees!\n"
-"The current version of TREE-QMC requires complete gene trees (i.e., no missing\n"
-"taxa). Support for incomplete gene trees will be added in the near future.\n\n";
-            for (Tree *t : input) delete t;
-            return 0;
-        }
     }
 
     // Open CSV log file
