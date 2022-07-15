@@ -1799,7 +1799,7 @@ int Graph::get_clusters(str<int>::map *C, int limit, int matrix_power, double in
 int main(int argc, char** argv) {
     auto start = std::chrono::high_resolution_clock::now();
 
-    std::cout << "TREE-QMC version 1.0.0\nCOMMAND: ";
+    std::cout << "TREE-QMC version 1.1.0\nCOMMAND: ";
     for (int i = 0; i < argc; i++) {
         std::cout << argv[i] << ' ';
     }
