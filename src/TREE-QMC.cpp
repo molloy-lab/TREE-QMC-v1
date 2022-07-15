@@ -20,7 +20,7 @@ std::ofstream logs[8];
 
 const std::string help = 
 "=================================== TREE-QMC ===================================\n"
-"This is version 1.0.0 of TREe Embedded Quartet Max Cut (TREE-QMC).\n\n" 
+"This is version 1.1.0 of TREe Embedded Quartet Max Cut (TREE-QMC).\n\n" 
 "USAGE:\n"
 "./TREE-QMC (-i|--input) <input file> [(-o|--output) <output file>]\n"
 "           [(--polyseed) <integer>] [(--maxcutseed) <integer>]\n"

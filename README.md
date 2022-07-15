@@ -24,12 +24,12 @@ To see TREE-QMC usage options, use command:
 
 The output should be
 ```
-TREE-QMC version 1.0.0
+TREE-QMC version 1.1.0
 COMMAND: ./TREE-QMC 
 
 ERROR: input file  does not exist!
 =================================== TREE-QMC ===================================
-This is version 1.0.0 of TREe Embedded Quartet Max Cut (TREE-QMC).
+This is version 1.1.0 of TREe Embedded Quartet Max Cut (TREE-QMC).
 
 USAGE:
 ./TREE-QMC (-i|--input) <input file> [(-o|--output) <output file>]
