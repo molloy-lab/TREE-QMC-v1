@@ -16,9 +16,7 @@ To run TREE-QMC, use command:
 ```
 ./TREE-QMC -i <input file> -o <output file name>
 ```
-See [this tutorial](example/tutorial) for more information.
-
-For more information, check out the TREE-QMC usage options with this command:
+See [this tutorial](example/tutorial.md) for more information. Also, check out the TREE-QMC usage options with this command:
 ```
 ./TREE-QMC -h
 ```
