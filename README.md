@@ -14,10 +14,11 @@ g++ -std=c++11 -O2 -I MQLib/include -o TREE-QMC src/TREE-QMC.cpp MQLib/bin/MQLib
 
 To run TREE-QMC, use command:
 ```
-./TREE-QMC -i <input file> -o <output name>
+./TREE-QMC -i <input file> -o <output file name>
 ```
+See [this tutorial](example/tutorial) for more information.
 
-To see TREE-QMC usage options, use command:
+For more information, check out the TREE-QMC usage options with this command:
 ```
 ./TREE-QMC -h
 ```
