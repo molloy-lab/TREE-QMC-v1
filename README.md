@@ -5,7 +5,7 @@ To learn more about TREE-QMC, check out our bioRxiv preprint: https://doi.org/10
 
 To build TREE-QMC, use commands:
 ```
-git clone https://github.com/yhhan19/TREE-QMC.git
+git clone https://github.com/molloy-lab/TREE-QMC.git
 cd TREE-QMC/MQLib
 make
 cd ..
