@@ -20,7 +20,7 @@ std::ofstream logs[8];
 
 const std::string help = 
 "=================================== TREE-QMC ===================================\n"
-"This is version 1.1.0 of TREe Embedded Quartet Max Cut (TREE-QMC).\n\n" 
+"This is version 1.1.1 of TREe Embedded Quartet Max Cut (TREE-QMC).\n\n" 
 "USAGE:\n"
 "./TREE-QMC (-i|--input) <input file> [(-o|--output) <output file>]\n"
 "           [(--polyseed) <integer>] [(--maxcutseed) <integer>]\n"
@@ -75,7 +75,7 @@ const std::string help =
 "              number of artificial taxa in the subproblem)\n"
 "        -v 2: also write subproblem trees in newick format\n"
 "        -v 3: also write subproblem quartet graphs in phylip matrix format\n\n"
-"Contact: Post issue to Github (https://github.com/molloy-lab/TREE-QMC/)\n"
+"Contact: Post issue to Github (https://github.com/molloy-lab/TREE-QMC-v1.git)\n"
 "        or email Yunheng Han (yhhan@umd.edu) & Erin Molloy (ekmolloy@umd.edu)\n\n"
 "If you use TREE-QMC in your work, please cite:\n"
 "  Han and Molloy, 2022, \"TREE-QMC: Improving quartet graph construction for\n"
@@ -1799,7 +1799,7 @@ int Graph::get_clusters(str<int>::map *C, int limit, int matrix_power, double in
 int main(int argc, char** argv) {
     auto start = std::chrono::high_resolution_clock::now();
 
-    std::cout << "TREE-QMC version 1.1.0\nCOMMAND: ";
+    std::cout << "TREE-QMC version 1.1.1\nCOMMAND: ";
     for (int i = 0; i < argc; i++) {
         std::cout << argv[i] << ' ';
     }
