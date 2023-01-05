@@ -24,12 +24,12 @@ See [this tutorial](example/tutorial.md) for more information. Also, check out t
 
 The output should be
 ```
-TREE-QMC version 1.1.0
+TREE-QMC version 1.1.1
 COMMAND: ./TREE-QMC-v1 
 
 ERROR: input file  does not exist!
 =================================== TREE-QMC ===================================
-This is version 1.1.0 of TREe Embedded Quartet Max Cut (TREE-QMC).
+This is version 1.1.1 of TREe Embedded Quartet Max Cut (TREE-QMC).
 
 USAGE:
 ./TREE-QMC (-i|--input) <input file> [(-o|--output) <output file>]
@@ -70,11 +70,11 @@ OPTIONS:
         -n 2: non-uniform (default)
 [(-x|--execution) <execution mode>]
         TREE-QMC uses an efficient algorithm that operates directly on the
-        input gene trees by default. The brute force algorithm, which operates
-        on a set of quartets weighted based on the input gene trees, is also
+        input gene trees by default. The naive algorithm, which operates on a
+        set of quartets weighted based on the input gene trees, is also
         implemented for testing purposes.
         -x 0: run efficient algorithm (default)
-        -x 1: run brute force algorithm
+        -x 1: run naive algorithm
         -x 2: also write weighted quartets so they given as input to wQMC; see
               "<input file>.weighted_quartets" and "<input file>.taxon_name_map"
         -x 3: verify that the naive and efficient algorithms produce equivalent
@@ -87,8 +87,8 @@ OPTIONS:
         -v 2: also write subproblem trees in newick format
         -v 3: also write subproblem quartet graphs in phylip matrix format
 
-Contact: Post issue to Github (https://github.com/molloy-lab/TREE-QMC/)
-         or email Yunheng Han (yhhan@umd.edu) & Erin Molloy (ekmolloy@umd.edu)
+Contact: Post issue to Github (https://github.com/molloy-lab/TREE-QMC-v1.git)
+        or email Yunheng Han (yhhan@umd.edu) & Erin Molloy (ekmolloy@umd.edu)
 
 If you use TREE-QMC in your work, please cite:
   Han and Molloy, 2022, "TREE-QMC: Improving quartet graph construction for
