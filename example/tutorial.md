@@ -3,7 +3,7 @@ TREE-QMC Tutorial
 
 ### Step 1: Clone TREE-QMC repository.
 ```
-git clone https://github.com/yhhan19/TREE-QMC.git
+git clone https://github.com/molloy-lab/TREE-QMC.git
 ```
 
 ### Step 2: Build TREE-QMC.
