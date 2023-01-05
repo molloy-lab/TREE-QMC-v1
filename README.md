@@ -1,7 +1,9 @@
-TREE-QMC
---------
+TREE-QMC version 1
+------------------
 
-To learn more about TREE-QMC, check out our bioRxiv preprint: https://doi.org/10.1101/2022.06.25.497608
+The code in this repository corresponds to the TREE-QMC method presented in "TREE-QMC: Improving quartet graph construction for scalable and accurate species tree estimation from gene trees". This work was recently accepted to RECOMB 2023 and can be found on bioRxiv: [https://doi.org/10.1101/2022.06.25.497608](https://doi.org/10.1101/2022.06.25.497608).
+
+You may be interested in using TREE-QMC version 2, which is much faster. Go here: 
 
 To build TREE-QMC, use commands:
 ```
