@@ -1291,7 +1291,7 @@ Tree::Node *Tree::construct_stree(std::vector<Tree *> &input, Taxa &subset, int 
             logs[2].close();
         }
     }
-    std::cout << display_tree(root) << std::endl;
+    //std::cout << display_tree(root) << std::endl;
     return root;
 }
 
