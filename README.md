@@ -1,32 +1,31 @@
 TREE-QMC version 1
 ------------------
+**TREE-QMC version 2 is now available. Check it out at [https://github.com/molloy-lab/TREE-QMC.git](https://github.com/molloy-lab/TREE-QMC.git).**
 
-The code in this repository corresponds to the TREE-QMC method presented in "TREE-QMC: Improving quartet graph construction for scalable and accurate species tree estimation from gene trees". This work was recently accepted to RECOMB 2023 and can be found on bioRxiv: [https://doi.org/10.1101/2022.06.25.497608](https://doi.org/10.1101/2022.06.25.497608).
-
-You may be interested in using TREE-QMC version 2, which is much faster. Go here: 
+The code in this repository was used in the study "TREE-QMC: Improving quartet graph construction for scalable and accurate species tree estimation from gene trees". This work presents the TREE-QMC method. It has been accepted to RECOMB 2023 and is available on bioRxiv: [https://doi.org/10.1101/2022.06.25.497608](https://doi.org/10.1101/2022.06.25.497608).
 
 To build TREE-QMC, use commands:
 ```
-git clone https://github.com/molloy-lab/TREE-QMC.git
-cd TREE-QMC/MQLib
+git clone https://github.com/molloy-lab/TREE-QMC-v1.git
+cd TREE-QMC-v1/MQLib
 make
 cd ..
-g++ -std=c++11 -O2 -I MQLib/include -o TREE-QMC src/TREE-QMC.cpp MQLib/bin/MQLib.a
+g++ -std=c++11 -O2 -I MQLib/include -o TREE-QMC-v1 src/TREE-QMC.cpp MQLib/bin/MQLib.a
 ```
 
 To run TREE-QMC, use command:
 ```
-./TREE-QMC -i <input file> -o <output file name>
+./TREE-QMC-v1 -i <input file> -o <output file name>
 ```
 See [this tutorial](example/tutorial.md) for more information. Also, check out the TREE-QMC usage options with this command:
 ```
-./TREE-QMC -h
+./TREE-QMC-v1 -h
 ```
 
 The output should be
 ```
 TREE-QMC version 1.1.0
-COMMAND: ./TREE-QMC 
+COMMAND: ./TREE-QMC-v1 
 
 ERROR: input file  does not exist!
 =================================== TREE-QMC ===================================
