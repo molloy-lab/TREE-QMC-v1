@@ -1,7 +1,11 @@
+We **recommend** using [weighted TREE-QMC](https://github.com/molloy-lab/weighted-TREE-QMC) so that you can advantage of the quartet weighting options proposed by [Zhang & Mirarab, Mol Biol Evol, 2022](https://doi.org/10.1093/molbev/msac215). The weighted TREE-QMC repository also includes the algorithm for unweighted quartets (from the latest [TREE-QMC](https://github.com/molloy-lab/TREE-QMC) respository) - just use the following command:
+
+```
+./wTREE-QMC -w f -i <input gene trees> -o <output species tree>
+```
+
 TREE-QMC version 1
 ------------------
-**TREE-QMC version 2 is now available. Check it out at [https://github.com/molloy-lab/TREE-QMC.git](https://github.com/molloy-lab/TREE-QMC.git).**
-
 The code in this repository was used in the study "TREE-QMC: Improving quartet graph construction for scalable and accurate species tree estimation from gene trees". This work presents the TREE-QMC method. It has been accepted to [RECOMB 2023](http://recomb2023.bilkent.edu.tr/program.html) and is available on [bioRxiv](https://doi.org/10.1101/2022.06.25.497608). The data used in this study are available on [Dryad](https://doi.org/10.5061/dryad.m0cfxpp6g) and the scripts are available on [Github](https://github.com/molloy-lab/tree-qmc-study).
 
 To build TREE-QMC, use commands:
